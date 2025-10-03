@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Net Metering Agreement Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 700px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .format-selection {
+            margin: 30px 0 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .format-selection h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .radio-option {
+            flex: 1;
+        }
+        
+        .radio-option input[type="radio"] {
+            display: none;
+        }
+        
+        .radio-option label {
+            display: block;
+            padding: 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .radio-option input[type="radio"]:checked + label {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .radio-option label:hover {
+            border-color: #667eea;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px 15px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Net Metering Agreement Generator</h1>
+        <p class="subtitle">Fill the form to generate your customized agreement</p>
+        
+        <div class="info-box">
+            📝 All fields are required. Make sure to enter accurate information.
+        </div>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label for="location">📍 Location</label>
+                <input type="text" id="location" name="location" 
+                       placeholder="e.g., KUSUMBE" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="agreement_date">📅 Agreement Date</label>
+                <input type="text" id="agreement_date" name="agreement_date" 
+                       placeholder="e.g., 1st day of SEP, 2025" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="consumer_name">👤 Consumer Name</label>
+                <input type="text" id="consumer_name" name="consumer_name" 
+                       placeholder="e.g., BHARTI PARAS PARDHI" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="premises_address">🏠 Premises Address</label>
+                <textarea id="premises_address" name="premises_address" 
+                          placeholder="e.g., BNO. 05 PNO.18 GNO.383 SWAMISAMARTH JAL GAON JALGAON KUSUMBE Kh 425001" 
+                          required></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="consumer_number">🔢 Consumer Number</label>
+                <input type="text" id="consumer_number" name="consumer_number" 
+                       placeholder="e.g., 110363099084" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="distribution_licensee">🏢 Distribution Licensee</label>
+                <input type="text" id="distribution_licensee" name="distribution_licensee" 
+                       placeholder="e.g., MSEDCL, JALGAON DIST. JALGAON" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="system_capacity">⚡ Solar System Capacity</label>
+                <input type="text" id="system_capacity" name="system_capacity" 
+                       placeholder="e.g., 3.00 KW" required>
+            </div>
+            
+            <div class="format-selection">
+                <h3>📄 Select Output Format</h3>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="format_docx" name="output_format" 
+                               value="docx" checked>
+                        <label for="format_docx">
+                            <strong>DOCX</strong><br>
+                            <small>Word Document</small>
+                        </label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="format_pdf" name="output_format" 
+                               value="pdf">
+                        <label for="format_pdf">
+                            <strong>PDF</strong><br>
+                            <small>Portable Format</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit">🚀 Generate Agreement</button>
+        </form>
+    </div>
+</body>
+</html>
