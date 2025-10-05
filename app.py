@@ -12,6 +12,7 @@ import re
 import time
 from werkzeug.utils import secure_filename
 from datetime import datetime
+from docx2pdf import convert as docx_to_pdf_convert
 
 app = Flask(__name__)
 app.secret_key = 'solar_doc_gen_secret_key_2025'
@@ -398,42 +399,19 @@ def add_images_to_wcr(doc, aadhar_path, signature_path):
 
 
 
-def convert_docx_to_pdf(docx_path, output_dir):
-    """Convert DOCX to PDF using LibreOffice"""
+def convert_docx_xto_pdf(docx_path, output_dir):
+    """Convert DOCX to PDF using docx2pdf library"""
     try:
-        libreoffice_paths = [
-            '/usr/local/bin/soffice',
-            '/Applications/LibreOffice.app/Contents/MacOS/soffice',
-            'soffice',
-            '/usr/bin/soffice'
-        ]
-        
-        soffice_cmd = None
-        for path in libreoffice_paths:
-            if os.path.exists(path) or shutil.which(path):
-                soffice_cmd = path
-                break
-        
-        if not soffice_cmd:
-            raise Exception("LibreOffice not found. Install: brew install --cask libreoffice")
-        
-        cmd = [soffice_cmd, '--headless', '--convert-to', 'pdf', '--outdir', output_dir, docx_path]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        
-        if result.returncode != 0:
-            raise Exception(f"LibreOffice error: {result.stderr}")
-        
         pdf_filename = os.path.splitext(os.path.basename(docx_path))[0] + '.pdf'
         pdf_path = os.path.join(output_dir, pdf_filename)
         
-        time.sleep(1)
+        # Convert DOCX to PDF
+        docx_to_pdf_convert(docx_path, pdf_path)
         
         if not os.path.exists(pdf_path):
-            raise Exception(f"PDF not created at {pdf_path}")
+            raise Exception("PDF not created")
         
         return pdf_path
-    except subprocess.TimeoutExpired:
-        raise Exception("PDF conversion timeout (60s)")
     except Exception as e:
         raise Exception(f"PDF conversion failed: {str(e)}")
 
