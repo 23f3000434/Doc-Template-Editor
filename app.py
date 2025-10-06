@@ -399,21 +399,45 @@ def add_images_to_wcr(doc, aadhar_path, signature_path):
 
 
 
-def convert_docx_xto_pdf(docx_path, output_dir):
-    """Convert DOCX to PDF using docx2pdf library"""
+def convert_docx_to_pdf(docx_path, output_dir):
+    """Convert DOCX to PDF using LibreOffice"""
     try:
+        libreoffice_paths = [
+            '/usr/local/bin/soffice',
+            '/Applications/LibreOffice.app/Contents/MacOS/soffice',
+            'soffice',
+            '/usr/bin/soffice'
+        ]
+        
+        soffice_cmd = None
+        for path in libreoffice_paths:
+            if os.path.exists(path) or shutil.which(path):
+                soffice_cmd = path
+                break
+        
+        if not soffice_cmd:
+            raise Exception("LibreOffice not found. Install: brew install --cask libreoffice")
+        
+        cmd = [soffice_cmd, '--headless', '--convert-to', 'pdf', '--outdir', output_dir, docx_path]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        
+        if result.returncode != 0:
+            raise Exception(f"LibreOffice error: {result.stderr}")
+        
         pdf_filename = os.path.splitext(os.path.basename(docx_path))[0] + '.pdf'
         pdf_path = os.path.join(output_dir, pdf_filename)
         
-        # Convert DOCX to PDF
-        docx_to_pdf_convert(docx_path, pdf_path)
+        time.sleep(1)
         
         if not os.path.exists(pdf_path):
-            raise Exception("PDF not created")
+            raise Exception(f"PDF not created at {pdf_path}")
         
         return pdf_path
+    except subprocess.TimeoutExpired:
+        raise Exception("PDF conversion timeout (60s)")
     except Exception as e:
         raise Exception(f"PDF conversion failed: {str(e)}")
+
 
 def process_template(template_key):
     """Generic template processor with special handling"""
@@ -564,4 +588,5 @@ def proforma_a():
     return process_template('proforma_a')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
