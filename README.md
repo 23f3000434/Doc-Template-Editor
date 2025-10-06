@@ -4,4 +4,4 @@ A tool for editing document templates.
 
 ## Getting Started
 
-To be developed.
+So the Final structure of the app is editing templates for government solar documentation
