@@ -12,7 +12,7 @@ import re
 import time
 from werkzeug.utils import secure_filename
 from datetime import datetime
-from docx2pdf import convert as docx_to_pdf_convert
+
 
 app = Flask(__name__)
 app.secret_key = 'solar_doc_gen_secret_key_2025'
