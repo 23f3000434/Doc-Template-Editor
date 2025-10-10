@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Document Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .form-container { background: white; border-radius: 15px; padding: 40px; max-width: 900px; margin: 0 auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        .section-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; margin-top: 30px; }
+        .btn-generate { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 15px 40px; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1 class="text-center mb-4">🌞 Solar Document Generator</h1>
+        <p class="text-center text-muted mb-4">Fill all details once and download all documents together</p>
+        
+        <form action="{{ url_for('generate_documents') }}" method="POST" enctype="multipart/form-data">
+            
+            <!-- Common Details Section -->
+            <div class="section-header">
+                <h4 class="mb-0">📋 Consumer Details (Common for All Documents)</h4>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Consumer Name *</label>
+                    <input type="text" name="consumer_name" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Consumer Number *</label>
+                    <input type="text" name="consumer_number" class="form-control" required>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Complete Address *</label>
+                <textarea name="address" class="form-control" rows="3" required></textarea>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">District</label>
+                    <input type="text" name="district" class="form-control" placeholder="e.g., Jalgaon">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Mobile Number</label>
+                    <input type="tel" name="mobile_number" class="form-control" placeholder="10-digit">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="email" class="form-control">
+            </div>
+            
+            <!-- Solar System Details -->
+            <div class="section-header">
+                <h4 class="mb-0">⚡ Solar System Specifications</h4>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Sanctioned Capacity (KW) *</label>
+                    <input type="text" name="sanctioned_capacity" class="form-control" placeholder="e.g., 5" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Installed Capacity (KW) *</label>
+                    <input type="text" name="installed_capacity" class="form-control" placeholder="e.g., 3" required>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Module Make *</label>
+                    <input type="text" name="module_make" class="form-control" placeholder="e.g., WAAREE" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Model Number *</label>
+                    <input type="text" name="model_number" class="form-control" placeholder="e.g., WAAREE 560-144M" required>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Wattage per Module (Wp)</label>
+                    <input type="text" name="wattage" class="form-control" placeholder="e.g., 560">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Number of Modules</label>
+                    <input type="text" name="number_of_modules" class="form-control" placeholder="e.g., 6">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Module Capacity (KW)</label>
+                    <input type="text" name="module_capacity" class="form-control" placeholder="e.g., 3.3">
+                </div>
+            </div>
+            
+            <!-- Inverter Details -->
+            <div class="section-header">
+                <h4 class="mb-0">🔌 Inverter Specifications</h4>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Inverter Model Number</label>
+                    <input type="text" name="model_number_inverter" class="form-control" placeholder="e.g., WAAREE B05F502049EA222">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Inverter Rating</label>
+                    <input type="text" name="rating" class="form-control" placeholder="e.g., 5.3">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Inverter Capacity (KW)</label>
+                <input type="text" name="inverter_capacity" class="form-control" placeholder="e.g., 5">
+            </div>
+            
+            <!-- Agreement & Dates -->
+            <div class="section-header">
+                <h4 class="mb-0">📅 Dates & Agreement Details</h4>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Installation Date *</label>
+                    <input type="date" name="installation_date" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Agreement Date</label>
+                    <input type="date" name="agreement_date" class="form-control">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Performance Check Date</label>
+                <input type="date" name="performance_check_date" class="form-control">
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Distribution Licensee</label>
+                <input type="text" name="distribution_licensee" class="form-control" placeholder="e.g., MSEDCL, JALGAON">
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Total Cost (₹)</label>
+                <input type="text" name="total_cost" class="form-control" placeholder="e.g., 150000">
+            </div>
+            
+            <!-- Identity Documents -->
+            <div class="section-header">
+                <h4 class="mb-0">📄 Identity Documents (For WCR)</h4>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Aadhar Number</label>
+                <input type="text" name="aadhar_number" class="form-control" placeholder="XXXX XXXX XXXX">
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Aadhar Card Image</label>
+                <input type="file" name="aadhar_image" class="form-control" accept="image/*">
+                <small class="text-muted">Upload clear image of Aadhar card</small>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Signature Image</label>
+                <input type="file" name="signature_image" class="form-control" accept="image/*">
+                <small class="text-muted">Upload signature image (transparent background preferred)</small>
+            </div>
+            
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-primary btn-lg btn-generate">
+                    📥 Generate & Download All Documents (.zip)
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
