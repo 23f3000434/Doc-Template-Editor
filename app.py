@@ -8,9 +8,10 @@ import tempfile
 import traceback
 from werkzeug.utils import secure_filename
 from datetime import datetime
+import subprocess
 
 app = Flask(__name__)
-app.secret_key = 'solar_unified_doc_generator_2025'
+app.secret_key = 'solar_unified_doc_generator_2025_secure_key'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -52,8 +53,19 @@ DOCUMENT_TEMPLATES = {
     'Proforma-A': 'static/templates/2.-Annexure-I-Profarma-A.docx'
 }
 
+def check_libreoffice():
+    """Check if LibreOffice is available"""
+    try:
+        result = subprocess.run(['libreoffice', '--version'], 
+                              capture_output=True, timeout=5)
+        return result.returncode == 0
+    except:
+        return False
+
+PDF_AVAILABLE = check_libreoffice()
+
 def replace_in_runs(runs, replacements):
-    """FIXED: Handle variables split across runs"""
+    """Handle variables split across runs"""
     full_text = ''.join(run.text for run in runs)
     
     modified = False
@@ -70,7 +82,7 @@ def replace_in_runs(runs, replacements):
             runs[0].font.highlight_color = None
 
 def docx_replace_robust(doc, form_data):
-    """Replace variables using run-based approach"""
+    """Replace variables in paragraphs AND tables"""
     replacements = {}
     for variable, field_name in VARIABLE_MAPPING.items():
         if field_name in form_data and form_data[field_name]:
@@ -86,6 +98,13 @@ def docx_replace_robust(doc, form_data):
             for cell in row.cells:
                 for para in cell.paragraphs:
                     replace_in_runs(para.runs, replacements)
+                
+                # Process nested tables
+                for nested_table in cell.tables:
+                    for nested_row in nested_table.rows:
+                        for nested_cell in nested_row.cells:
+                            for para in nested_cell.paragraphs:
+                                replace_in_runs(para.runs, replacements)
     
     # Process headers/footers
     for section in doc.sections:
@@ -101,73 +120,92 @@ def docx_replace_robust(doc, form_data):
             pass
 
 def add_images_to_wcr(doc, aadhar_path, signature_path):
-    """Find image variable placeholders and replace with actual images"""
+    """Add consumer signature and aadhar images"""
     try:
-        # Look for paragraphs with image variable names
         for para in doc.paragraphs:
             para_text = para.text
             
-            # Replace signature_image_variable with actual signature
+            # Consumer signature - skip if paragraph already has vendor image
             if 'signature_image_variable' in para_text:
-                # Clear the paragraph text
-                for run in para.runs:
-                    run.text = run.text.replace('signature_image_variable', '')
+                has_vendor_image = any(run._element.xpath('.//a:blip') for run in para.runs)
                 
-                # Add signature image
-                if signature_path and os.path.exists(signature_path):
-                    para.runs[0].add_picture(signature_path, width=Inches(1.5))
-                    print(f"  ✓ Added signature image")
-            
-            # Replace aadhar placeholder
-            if 'aadhar_image_variable' in para_text or 'aadhar_image' in para_text:
-                for run in para.runs:
-                    run.text = run.text.replace('aadhar_image_variable', '').replace('aadhar_image', '')
-                
-                if aadhar_path and os.path.exists(aadhar_path):
-                    para.runs[0].add_picture(aadhar_path, width=Inches(3.0))
-                    print(f"  ✓ Added Aadhar image")
-        
-        # Also check tables
-        for table in doc.tables:
-            for row in table.rows:
-                for cell in row.cells:
-                    for para in cell.paragraphs:
-                        para_text = para.text
-                        
-                        if 'signature_image_variable' in para_text:
-                            for run in para.runs:
-                                run.text = run.text.replace('signature_image_variable', '')
+                if not has_vendor_image:
+                    for run in para.runs:
+                        if 'signature_image_variable' in run.text:
+                            run.text = run.text.replace('signature_image_variable', '')
                             if signature_path and os.path.exists(signature_path):
-                                para.runs[0].add_picture(signature_path, width=Inches(1.5))
-                                print(f"  ✓ Added signature in table")
-                        
-                        if 'aadhar_image_variable' in para_text or 'aadhar_image' in para_text:
-                            for run in para.runs:
-                                run.text = run.text.replace('aadhar_image_variable', '').replace('aadhar_image', '')
-                            if aadhar_path and os.path.exists(aadhar_path):
-                                para.runs[0].add_picture(aadhar_path, width=Inches(3.0))
-                                print(f"  ✓ Added Aadhar in table")
+                                run.add_picture(signature_path, width=Inches(1.5))
+                                print(f"  ✓ Added consumer signature")
+            
+            # Aadhar image
+            if 'aadhar_image_variable' in para_text:
+                for run in para.runs:
+                    if 'aadhar_image_variable' in run.text:
+                        run.text = run.text.replace('aadhar_image_variable', '')
+                        if aadhar_path and os.path.exists(aadhar_path):
+                            run.add_picture(aadhar_path, width=Inches(3.0))
+                            print(f"  ✓ Added Aadhar image")
         
         return True
         
     except Exception as e:
-        print(f"  ✗ Error adding images: {e}")
-        import traceback
+        print(f"  ✗ Image error: {e}")
         traceback.print_exc()
         return True
 
+def convert_to_pdf_libreoffice(docx_path):
+    """Convert DOCX to PDF using LibreOffice"""
+    try:
+        if not PDF_AVAILABLE:
+            print(f"  ⚠️ LibreOffice not available")
+            return None
+        
+        output_dir = os.path.dirname(docx_path)
+        
+        result = subprocess.run([
+            'libreoffice',
+            '--headless',
+            '--convert-to', 'pdf',
+            '--outdir', output_dir,
+            docx_path
+        ], capture_output=True, timeout=60, text=True)
+        
+        pdf_path = docx_path.replace('.docx', '.pdf')
+        
+        if os.path.exists(pdf_path):
+            file_size = os.path.getsize(pdf_path)
+            print(f"  ✓ PDF created ({file_size:,} bytes)")
+            return pdf_path
+        else:
+            print(f"  ✗ PDF creation failed")
+            if result.stderr:
+                print(f"  Error: {result.stderr}")
+            return None
+            
+    except subprocess.TimeoutExpired:
+        print(f"  ✗ PDF conversion timeout")
+        return None
+    except Exception as e:
+        print(f"  ✗ PDF error: {e}")
+        traceback.print_exc()
+        return None
 
 @app.route('/')
 def index():
-    return render_template('unified_form.html')
+    return render_template('unified_form.html', pdf_available=PDF_AVAILABLE)
 
 @app.route('/generate_documents', methods=['POST'])
 def generate_documents():
     print("\n" + "="*80)
     print("STARTING DOCUMENT GENERATION")
+    print(f"LibreOffice available: {PDF_AVAILABLE}")
     print("="*80 + "\n")
     
     try:
+        # Get format option
+        output_format = request.form.get('output_format', 'both')
+        print(f"Output format: {output_format}")
+        
         # Collect form data
         form_data = {}
         for key in request.form:
@@ -187,11 +225,11 @@ def generate_documents():
                     temp_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                     file.save(temp_path)
                     uploaded_files[key] = temp_path
-                    print(f"✓ Uploaded: {key} -> {os.path.basename(temp_path)}")
+                    print(f"✓ Uploaded: {key}")
         
         # Create temp directory
         tmpdir = tempfile.mkdtemp()
-        print(f"✓ Created temp dir: {tmpdir}\n")
+        print(f"✓ Temp dir: {tmpdir}\n")
         
         generated_files = []
         errors = []
@@ -211,33 +249,72 @@ def generate_documents():
             try:
                 # Load document
                 doc = Document(template_path)
-                print(f"  ✓ Loaded ({len(doc.paragraphs)} paragraphs, {len(doc.tables)} tables)")
+                print(f"  ✓ Loaded ({len(doc.paragraphs)} paras, {len(doc.tables)} tables)")
                 
                 # Replace variables
                 docx_replace_robust(doc, form_data)
                 print(f"  ✓ Variables replaced")
                 
-                # Add images to WCR ONLY
+                # Add images to WCR
                 if doc_name == 'WCR':
                     aadhar = uploaded_files.get('aadhar_image')
                     sig = uploaded_files.get('signature_image')
                     if aadhar or sig:
-                        print(f"  → Adding images to WCR...")
                         add_images_to_wcr(doc, aadhar, sig)
                 
-                # Save document
-                output_file = os.path.join(tmpdir, f"{doc_name}.docx")
-                doc.save(output_file)
+                # Save DOCX (always need to save first)
+                docx_file = os.path.join(tmpdir, f"{doc_name}.docx")
+                doc.save(docx_file)
                 
-                # VERIFY FILE WAS CREATED
-                if os.path.exists(output_file):
-                    file_size = os.path.getsize(output_file)
-                    print(f"  ✓ Saved successfully ({file_size:,} bytes)")
-                    generated_files.append(output_file)
-                else:
-                    error_msg = f"{doc_name}: File not created after save!"
+                if not os.path.exists(docx_file):
+                    error_msg = f"{doc_name}: DOCX save failed"
                     print(f"  ✗ {error_msg}")
                     errors.append(error_msg)
+                    continue
+                
+                print(f"  ✓ DOCX saved ({os.path.getsize(docx_file):,} bytes)")
+                
+                # Handle format selection
+                if output_format == 'docx':
+                    # User wants DOCX only
+                    generated_files.append(docx_file)
+                    
+                elif output_format == 'pdf':
+                    # User wants PDF only
+                    if not PDF_AVAILABLE:
+                        error_msg = f"{doc_name}: PDF not available (LibreOffice not installed)"
+                        print(f"  ✗ {error_msg}")
+                        errors.append(error_msg)
+                        continue
+                    
+                    print(f"  → Converting to PDF...")
+                    pdf_file = convert_to_pdf_libreoffice(docx_file)
+                    
+                    if pdf_file:
+                        generated_files.append(pdf_file)
+                        # Delete DOCX since user only wants PDF
+                        try:
+                            os.remove(docx_file)
+                        except:
+                            pass
+                    else:
+                        error_msg = f"{doc_name}: PDF conversion failed"
+                        print(f"  ✗ {error_msg}")
+                        errors.append(error_msg)
+                
+                elif output_format == 'both':
+                    # User wants both DOCX and PDF
+                    generated_files.append(docx_file)
+                    
+                    if PDF_AVAILABLE:
+                        print(f"  → Converting to PDF...")
+                        pdf_file = convert_to_pdf_libreoffice(docx_file)
+                        if pdf_file:
+                            generated_files.append(pdf_file)
+                        else:
+                            print(f"  ⚠️ PDF conversion failed, but DOCX available")
+                    else:
+                        print(f"  ⚠️ PDF not available (LibreOffice not installed)")
                 
             except Exception as e:
                 error_msg = f"{doc_name}: {str(e)}"
@@ -245,10 +322,10 @@ def generate_documents():
                 traceback.print_exc()
                 errors.append(error_msg)
             
-            print()  # Blank line
+            print()
         
         print(f"{'='*60}")
-        print(f"SUMMARY: Generated {len(generated_files)}/{len(DOCUMENT_TEMPLATES)} documents")
+        print(f"Generated {len(generated_files)} files")
         if errors:
             print(f"Errors: {len(errors)}")
             for err in errors:
@@ -256,12 +333,16 @@ def generate_documents():
         print(f"{'='*60}\n")
         
         if not generated_files:
-            flash('No documents were generated! Check console for errors.', 'error')
+            if output_format == 'pdf' and not PDF_AVAILABLE:
+                flash('PDF generation not available. Please install LibreOffice or select DOCX format.', 'error')
+            else:
+                flash('No documents were generated! Check console for errors.', 'error')
             return redirect(url_for('index'))
         
         # Create ZIP
         consumer_name = form_data.get('consumer_name', 'client').replace(' ', '_')
-        zip_filename = f"Solar_Documents_{consumer_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        zip_filename = f"Solar_Documents_{consumer_name}_{timestamp}.zip"
         zip_path = os.path.join(tmpdir, zip_filename)
         
         print(f"Creating ZIP: {zip_filename}")
@@ -269,28 +350,21 @@ def generate_documents():
             for file_path in generated_files:
                 arcname = os.path.basename(file_path)
                 zipf.write(file_path, arcname=arcname)
-                print(f"  ✓ Added: {arcname}")
-        
-        # Verify ZIP
-        with zipfile.ZipFile(zip_path, 'r') as zipf:
-            files_in_zip = zipf.namelist()
-            print(f"\n✓ ZIP contains {len(files_in_zip)} files: {files_in_zip}")
+                print(f"  ✓ {arcname}")
         
         # Read ZIP into memory
         with open(zip_path, 'rb') as f:
             zip_data = BytesIO(f.read())
-        
         zip_data.seek(0)
         
-        # Clean up uploaded files
+        # Cleanup uploaded files
         for file_path in uploaded_files.values():
             try:
                 os.remove(file_path)
             except:
                 pass
         
-        print(f"\n✓ Sending ZIP file to user\n")
-        print("="*80 + "\n")
+        print(f"\n✓ Sending ZIP\n" + "="*80 + "\n")
         
         return send_file(
             zip_data,
@@ -300,12 +374,8 @@ def generate_documents():
         )
     
     except Exception as e:
-        print(f"\n{'='*80}")
-        print(f"FATAL ERROR:")
-        print(f"{'='*80}")
-        print(f"{str(e)}")
+        print(f"\nFATAL ERROR: {e}")
         traceback.print_exc()
-        print(f"{'='*80}\n")
         flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('index'))
 

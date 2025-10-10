@@ -171,12 +171,28 @@
                 <input type="file" name="signature_image" class="form-control" accept="image/*">
                 <small class="text-muted">Upload signature image (transparent background preferred)</small>
             </div>
-            
+
+            <!-- Add this BEFORE the submit button -->
+            <div class="section-header">
+                <h4 class="mb-0">📄 Download Format</h4>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Select Output Format</label>
+                <select name="output_format" class="form-select" required>
+                    <option value="both">Both DOCX & PDF (Recommended)</option>
+                    <option value="docx">Only DOCX Files</option>
+                    <option value="pdf">Only PDF Files</option>
+                </select>
+                <small class="text-muted">Choose which format(s) to download</small>
+            </div>
+
             <div class="text-center mt-4">
                 <button type="submit" class="btn btn-primary btn-lg btn-generate">
-                    📥 Generate & Download All Documents (.zip)
+                    📥 Generate & Download Documents (.zip)
                 </button>
             </div>
+
         </form>
     </div>
     
