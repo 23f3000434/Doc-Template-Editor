@@ -15,7 +15,6 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Complete variable mapping
 VARIABLE_MAPPING = {
     'name_variable': 'consumer_name',
     'consumer_number_variable': 'consumer_number',
@@ -53,73 +52,110 @@ DOCUMENT_TEMPLATES = {
     'Proforma-A': 'static/templates/2.-Annexure-I-Profarma-A.docx'
 }
 
-def replace_text_in_paragraph(paragraph, search_text, replace_text):
-    """Replace text preserving formatting"""
-    if search_text in paragraph.text:
-        inline = paragraph.runs
-        for run in inline:
-            if search_text in run.text:
-                run.text = run.text.replace(search_text, replace_text)
-                run.font.highlight_color = None
-        return True
-    return False
-
-def remove_all_highlighting(doc):
-    """Remove highlighting"""
-    for para in doc.paragraphs:
-        for run in para.runs:
-            run.font.highlight_color = None
+def replace_in_runs(runs, replacements):
+    """FIXED: Handle variables split across runs"""
+    full_text = ''.join(run.text for run in runs)
     
-    for table in doc.tables:
-        for row in table.rows:
-            for cell in row.cells:
-                for para in cell.paragraphs:
-                    for run in para.runs:
-                        run.font.highlight_color = None
+    modified = False
+    for var_name, var_value in replacements.items():
+        if var_name in full_text:
+            full_text = full_text.replace(var_name, str(var_value))
+            modified = True
+    
+    if modified:
+        for run in runs[1:]:
+            run.text = ''
+        if runs:
+            runs[0].text = full_text
+            runs[0].font.highlight_color = None
 
 def docx_replace_robust(doc, form_data):
-    """Replace variables"""
-    for para in doc.paragraphs:
-        for variable, field_name in VARIABLE_MAPPING.items():
-            if field_name in form_data and form_data[field_name]:
-                replace_text_in_paragraph(para, variable, form_data[field_name])
+    """Replace variables using run-based approach"""
+    replacements = {}
+    for variable, field_name in VARIABLE_MAPPING.items():
+        if field_name in form_data and form_data[field_name]:
+            replacements[variable] = form_data[field_name]
     
+    # Process paragraphs
+    for para in doc.paragraphs:
+        replace_in_runs(para.runs, replacements)
+    
+    # Process tables
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 for para in cell.paragraphs:
-                    for variable, field_name in VARIABLE_MAPPING.items():
-                        if field_name in form_data and form_data[field_name]:
-                            replace_text_in_paragraph(para, variable, form_data[field_name])
+                    replace_in_runs(para.runs, replacements)
     
-    remove_all_highlighting(doc)
+    # Process headers/footers
+    for section in doc.sections:
+        try:
+            for para in section.header.paragraphs:
+                replace_in_runs(para.runs, replacements)
+        except:
+            pass
+        try:
+            for para in section.footer.paragraphs:
+                replace_in_runs(para.runs, replacements)
+        except:
+            pass
 
 def add_images_to_wcr(doc, aadhar_path, signature_path):
-    """FIXED: Safely add images to WCR"""
+    """Find image variable placeholders and replace with actual images"""
     try:
-        # Add images at the END of document (safest approach)
-        if aadhar_path and os.path.exists(aadhar_path):
-            try:
-                para = doc.add_paragraph()
-                para.add_run().add_picture(aadhar_path, width=Inches(3.0))
-                print("✓ Aadhar image added to WCR")
-            except Exception as e:
-                print(f"✗ Aadhar image failed: {e}")
+        # Look for paragraphs with image variable names
+        for para in doc.paragraphs:
+            para_text = para.text
+            
+            # Replace signature_image_variable with actual signature
+            if 'signature_image_variable' in para_text:
+                # Clear the paragraph text
+                for run in para.runs:
+                    run.text = run.text.replace('signature_image_variable', '')
+                
+                # Add signature image
+                if signature_path and os.path.exists(signature_path):
+                    para.runs[0].add_picture(signature_path, width=Inches(1.5))
+                    print(f"  ✓ Added signature image")
+            
+            # Replace aadhar placeholder
+            if 'aadhar_image_variable' in para_text or 'aadhar_image' in para_text:
+                for run in para.runs:
+                    run.text = run.text.replace('aadhar_image_variable', '').replace('aadhar_image', '')
+                
+                if aadhar_path and os.path.exists(aadhar_path):
+                    para.runs[0].add_picture(aadhar_path, width=Inches(3.0))
+                    print(f"  ✓ Added Aadhar image")
         
-        if signature_path and os.path.exists(signature_path):
-            try:
-                para = doc.add_paragraph()
-                para.add_run().add_picture(signature_path, width=Inches(1.5))
-                print("✓ Signature image added to WCR")
-            except Exception as e:
-                print(f"✗ Signature image failed: {e}")
+        # Also check tables
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    for para in cell.paragraphs:
+                        para_text = para.text
+                        
+                        if 'signature_image_variable' in para_text:
+                            for run in para.runs:
+                                run.text = run.text.replace('signature_image_variable', '')
+                            if signature_path and os.path.exists(signature_path):
+                                para.runs[0].add_picture(signature_path, width=Inches(1.5))
+                                print(f"  ✓ Added signature in table")
+                        
+                        if 'aadhar_image_variable' in para_text or 'aadhar_image' in para_text:
+                            for run in para.runs:
+                                run.text = run.text.replace('aadhar_image_variable', '').replace('aadhar_image', '')
+                            if aadhar_path and os.path.exists(aadhar_path):
+                                para.runs[0].add_picture(aadhar_path, width=Inches(3.0))
+                                print(f"  ✓ Added Aadhar in table")
         
         return True
+        
     except Exception as e:
-        print(f"✗ Image addition error: {e}")
+        print(f"  ✗ Error adding images: {e}")
+        import traceback
         traceback.print_exc()
-        # Return True anyway - don't fail WCR just because images failed
         return True
+
 
 @app.route('/')
 def index():
@@ -127,7 +163,9 @@ def index():
 
 @app.route('/generate_documents', methods=['POST'])
 def generate_documents():
-    print("=== GENERATE DOCUMENTS CALLED ===")
+    print("\n" + "="*80)
+    print("STARTING DOCUMENT GENERATION")
+    print("="*80 + "\n")
     
     try:
         # Collect form data
@@ -135,10 +173,9 @@ def generate_documents():
         for key in request.form:
             value = request.form.get(key, '').strip()
             form_data[key] = value
-            print(f"Form field: {key} = {value[:50] if value else 'empty'}")
         
-        # Add today's date
         form_data['todays_date'] = datetime.now().strftime('%d/%m/%Y')
+        print(f"✓ Collected {len(form_data)} form fields")
         
         # Handle file uploads
         uploaded_files = {}
@@ -150,64 +187,94 @@ def generate_documents():
                     temp_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                     file.save(temp_path)
                     uploaded_files[key] = temp_path
-                    print(f"Uploaded: {key} -> {temp_path}")
+                    print(f"✓ Uploaded: {key} -> {os.path.basename(temp_path)}")
         
         # Create temp directory
         tmpdir = tempfile.mkdtemp()
-        print(f"Temp dir: {tmpdir}")
+        print(f"✓ Created temp dir: {tmpdir}\n")
         
         generated_files = []
+        errors = []
         
         # Process each document
         for doc_name, template_path in DOCUMENT_TEMPLATES.items():
-            print(f"\n--- Processing {doc_name} ---")
-            print(f"Template path: {template_path}")
+            print(f"{'='*60}")
+            print(f"Processing: {doc_name}")
+            print(f"{'='*60}")
             
             if not os.path.exists(template_path):
-                print(f"ERROR: Template not found: {template_path}")
-                flash(f'Template not found: {template_path}', 'error')
+                error_msg = f"Template not found: {template_path}"
+                print(f"✗ {error_msg}")
+                errors.append(error_msg)
                 continue
             
             try:
+                # Load document
                 doc = Document(template_path)
-                print(f"Document loaded: {len(doc.paragraphs)} paragraphs")
+                print(f"  ✓ Loaded ({len(doc.paragraphs)} paragraphs, {len(doc.tables)} tables)")
                 
                 # Replace variables
                 docx_replace_robust(doc, form_data)
-                print("Variables replaced")
+                print(f"  ✓ Variables replaced")
                 
-                # Add images to WCR
+                # Add images to WCR ONLY
                 if doc_name == 'WCR':
                     aadhar = uploaded_files.get('aadhar_image')
                     sig = uploaded_files.get('signature_image')
                     if aadhar or sig:
+                        print(f"  → Adding images to WCR...")
                         add_images_to_wcr(doc, aadhar, sig)
-                        print("Images added to WCR")
                 
-                # Save
+                # Save document
                 output_file = os.path.join(tmpdir, f"{doc_name}.docx")
                 doc.save(output_file)
-                generated_files.append(output_file)
-                print(f"Saved: {output_file}")
+                
+                # VERIFY FILE WAS CREATED
+                if os.path.exists(output_file):
+                    file_size = os.path.getsize(output_file)
+                    print(f"  ✓ Saved successfully ({file_size:,} bytes)")
+                    generated_files.append(output_file)
+                else:
+                    error_msg = f"{doc_name}: File not created after save!"
+                    print(f"  ✗ {error_msg}")
+                    errors.append(error_msg)
                 
             except Exception as e:
-                print(f"ERROR processing {doc_name}: {e}")
+                error_msg = f"{doc_name}: {str(e)}"
+                print(f"  ✗ ERROR: {error_msg}")
                 traceback.print_exc()
+                errors.append(error_msg)
+            
+            print()  # Blank line
+        
+        print(f"{'='*60}")
+        print(f"SUMMARY: Generated {len(generated_files)}/{len(DOCUMENT_TEMPLATES)} documents")
+        if errors:
+            print(f"Errors: {len(errors)}")
+            for err in errors:
+                print(f"  - {err}")
+        print(f"{'='*60}\n")
         
         if not generated_files:
-            flash('No documents were generated', 'error')
+            flash('No documents were generated! Check console for errors.', 'error')
             return redirect(url_for('index'))
         
         # Create ZIP
         consumer_name = form_data.get('consumer_name', 'client').replace(' ', '_')
-        zip_filename = f"Solar_Documents_{consumer_name}.zip"
+        zip_filename = f"Solar_Documents_{consumer_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
         zip_path = os.path.join(tmpdir, zip_filename)
         
-        print(f"\n--- Creating ZIP: {zip_path} ---")
+        print(f"Creating ZIP: {zip_filename}")
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for file_path in generated_files:
-                zipf.write(file_path, arcname=os.path.basename(file_path))
-                print(f"Added to ZIP: {os.path.basename(file_path)}")
+                arcname = os.path.basename(file_path)
+                zipf.write(file_path, arcname=arcname)
+                print(f"  ✓ Added: {arcname}")
+        
+        # Verify ZIP
+        with zipfile.ZipFile(zip_path, 'r') as zipf:
+            files_in_zip = zipf.namelist()
+            print(f"\n✓ ZIP contains {len(files_in_zip)} files: {files_in_zip}")
         
         # Read ZIP into memory
         with open(zip_path, 'rb') as f:
@@ -215,16 +282,16 @@ def generate_documents():
         
         zip_data.seek(0)
         
-        # Clean up
+        # Clean up uploaded files
         for file_path in uploaded_files.values():
             try:
                 os.remove(file_path)
             except:
                 pass
         
-        print(f"Sending ZIP: {zip_filename}")
+        print(f"\n✓ Sending ZIP file to user\n")
+        print("="*80 + "\n")
         
-        # Send file
         return send_file(
             zip_data,
             as_attachment=True,
@@ -233,12 +300,15 @@ def generate_documents():
         )
     
     except Exception as e:
-        print(f"\n=== FATAL ERROR ===")
-        print(f"Error: {e}")
+        print(f"\n{'='*80}")
+        print(f"FATAL ERROR:")
+        print(f"{'='*80}")
+        print(f"{str(e)}")
         traceback.print_exc()
-        flash(f'Error generating documents: {str(e)}', 'error')
+        print(f"{'='*80}\n")
+        flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('index'))
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)  # Debug=True for testing
+    app.run(host='0.0.0.0', port=port, debug=True)
