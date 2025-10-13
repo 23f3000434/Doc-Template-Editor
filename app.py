@@ -122,20 +122,20 @@ def docx_replace_robust(doc, form_data):
 def add_images_to_wcr(doc, aadhar_path, signature_path):
     """Add consumer signature and aadhar images"""
     try:
+        replaced_count = 0
+        
         for para in doc.paragraphs:
             para_text = para.text
             
-            # Consumer signature - skip if paragraph already has vendor image
+            # Consumer signature - replace the text even if vendor image exists
             if 'signature_image_variable' in para_text:
-                has_vendor_image = any(run._element.xpath('.//a:blip') for run in para.runs)
-                
-                if not has_vendor_image:
-                    for run in para.runs:
-                        if 'signature_image_variable' in run.text:
-                            run.text = run.text.replace('signature_image_variable', '')
-                            if signature_path and os.path.exists(signature_path):
-                                run.add_picture(signature_path, width=Inches(1.5))
-                                print(f"  ✓ Added consumer signature")
+                for run in para.runs:
+                    if 'signature_image_variable' in run.text:
+                        run.text = run.text.replace('signature_image_variable', '')
+                        if signature_path and os.path.exists(signature_path):
+                            run.add_picture(signature_path, width=Inches(1.5))
+                            replaced_count += 1
+                            print(f"  ✓ Added consumer signature #{replaced_count}")
             
             # Aadhar image
             if 'aadhar_image_variable' in para_text:
@@ -146,12 +146,16 @@ def add_images_to_wcr(doc, aadhar_path, signature_path):
                             run.add_picture(aadhar_path, width=Inches(3.0))
                             print(f"  ✓ Added Aadhar image")
         
+        if replaced_count > 0:
+            print(f"  ✓ Total signature images added: {replaced_count}")
+        
         return True
         
     except Exception as e:
         print(f"  ✗ Image error: {e}")
         traceback.print_exc()
         return True
+
 
 def add_signature_to_proforma(doc, signature_path):
     """Replace signature_image_variable text with actual signature image"""
