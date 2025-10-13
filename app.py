@@ -133,7 +133,7 @@ def add_images_to_wcr(doc, aadhar_path, signature_path):
                     if 'signature_image_variable' in run.text:
                         run.text = run.text.replace('signature_image_variable', '')
                         if signature_path and os.path.exists(signature_path):
-                            run.add_picture(signature_path, width=Inches(1.5))
+                            run.add_picture(signature_path, width=Inches(1.0))
                             replaced_count += 1
                             print(f"  ✓ Added consumer signature #{replaced_count}")
             
@@ -143,7 +143,7 @@ def add_images_to_wcr(doc, aadhar_path, signature_path):
                     if 'aadhar_image_variable' in run.text:
                         run.text = run.text.replace('aadhar_image_variable', '')
                         if aadhar_path and os.path.exists(aadhar_path):
-                            run.add_picture(aadhar_path, width=Inches(3.0))
+                            run.add_picture(aadhar_path, width=Inches(2.0))
                             print(f"  ✓ Added Aadhar image")
         
         if replaced_count > 0:
@@ -168,15 +168,16 @@ def add_signature_to_proforma(doc, signature_path):
         # Process all paragraphs
         for para in doc.paragraphs:
             if 'signature_image_variable' in para.text:
-                # Replace the text with image
+                # Replace the text with image (SMALLER SIZE)
                 for run in para.runs:
                     if 'signature_image_variable' in run.text:
                         run.text = run.text.replace('signature_image_variable', '')
-                        run.add_picture(signature_path, width=Inches(1.5))
+                        # Changed from 1.5 to 1.0 inches
+                        run.add_picture(signature_path, width=Inches(0.8))
                         replaced_count += 1
                         print(f"  ✓ Added signature image #{replaced_count}")
         
-        # Also check tables (in case it's in a table cell)
+        # Also check tables
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
@@ -185,7 +186,8 @@ def add_signature_to_proforma(doc, signature_path):
                             for run in para.runs:
                                 if 'signature_image_variable' in run.text:
                                     run.text = run.text.replace('signature_image_variable', '')
-                                    run.add_picture(signature_path, width=Inches(1.5))
+                                    # Changed from 1.5 to 1.0 inches
+                                    run.add_picture(signature_path, width=Inches(1.0))
                                     replaced_count += 1
                                     print(f"  ✓ Added signature image in table #{replaced_count}")
         
@@ -200,6 +202,7 @@ def add_signature_to_proforma(doc, signature_path):
         print(f"  ✗ Error adding signature: {e}")
         traceback.print_exc()
         return False
+
 
 
 def convert_to_pdf_libreoffice(docx_path):
