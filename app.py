@@ -8,6 +8,9 @@ import tempfile
 import traceback
 from werkzeug.utils import secure_filename
 from datetime import datetime
+from PIL import Image
+import base64
+from io import BytesIO
 import subprocess
 
 app = Flask(__name__)
@@ -203,6 +206,22 @@ def add_signature_to_proforma(doc, signature_path):
         traceback.print_exc()
         return False
 
+def process_cropped_image(base64_data):
+    """Convert base64 cropped image to file"""
+    try:
+        if ',' in base64_data:
+            base64_data = base64_data.split(',')[1]
+        
+        image_data = base64.b64decode(base64_data)
+        image = Image.open(BytesIO(image_data))
+        
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f'cropped_{datetime.now().timestamp()}.jpg')
+        image.save(temp_path, 'JPEG', quality=90)
+        
+        return temp_path
+    except Exception as e:
+        print(f"Error processing cropped image: {e}")
+        return None
 
 
 def convert_to_pdf_libreoffice(docx_path):
@@ -269,15 +288,19 @@ def generate_documents():
         
         # Handle file uploads
         uploaded_files = {}
-        for key in ['aadhar_image', 'signature_image']:
-            if key in request.files:
-                file = request.files[key]
-                if file and file.filename:
-                    filename = secure_filename(file.filename)
-                    temp_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                    file.save(temp_path)
-                    uploaded_files[key] = temp_path
-                    print(f"✓ Uploaded: {key}")
+        signature_cropped = request.form.get('signature_image_cropped')
+        if signature_cropped:
+            sig_path = process_cropped_image(signature_cropped)
+            if sig_path:
+                uploaded_files['signature_image'] = sig_path
+                print(f"✓ Signature cropped and saved")
+
+        aadhar_cropped = request.form.get('aadhar_image_cropped')
+        if aadhar_cropped:
+            aadhar_path = process_cropped_image(aadhar_cropped)
+            if aadhar_path:
+                uploaded_files['aadhar_image'] = aadhar_path
+                print(f"✓ Aadhar cropped and saved")
         
         # Create temp directory
         tmpdir = tempfile.mkdtemp()
