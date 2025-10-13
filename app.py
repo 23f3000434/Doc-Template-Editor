@@ -225,7 +225,7 @@ def process_cropped_image(base64_data):
 
 
 def convert_to_pdf_libreoffice(docx_path):
-    """Convert DOCX to PDF using LibreOffice"""
+    """Convert DOCX to PDF using LibreOffice with better formatting"""
     try:
         if not PDF_AVAILABLE:
             print(f"  ⚠️ LibreOffice not available")
@@ -233,13 +233,14 @@ def convert_to_pdf_libreoffice(docx_path):
         
         output_dir = os.path.dirname(docx_path)
         
+        # Use better conversion options
         result = subprocess.run([
             'libreoffice',
             '--headless',
-            '--convert-to', 'pdf',
+            '--convert-to', 'pdf:writer_pdf_Export',  # Explicit PDF filter
             '--outdir', output_dir,
             docx_path
-        ], capture_output=True, timeout=60, text=True)
+        ], capture_output=True, timeout=90, text=True)  # Increased timeout
         
         pdf_path = docx_path.replace('.docx', '.pdf')
         
@@ -254,12 +255,13 @@ def convert_to_pdf_libreoffice(docx_path):
             return None
             
     except subprocess.TimeoutExpired:
-        print(f"  ✗ PDF conversion timeout")
+        print(f"  ✗ PDF conversion timeout (90s)")
         return None
     except Exception as e:
         print(f"  ✗ PDF error: {e}")
         traceback.print_exc()
         return None
+
 
 @app.route('/')
 def index():
