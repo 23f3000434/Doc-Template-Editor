@@ -153,6 +153,51 @@ def add_images_to_wcr(doc, aadhar_path, signature_path):
         traceback.print_exc()
         return True
 
+def add_signature_to_proforma(doc, signature_path):
+    """Replace signature_image_variable text with actual signature image"""
+    if not signature_path or not os.path.exists(signature_path):
+        return False
+    
+    try:
+        replaced_count = 0
+        
+        # Process all paragraphs
+        for para in doc.paragraphs:
+            if 'signature_image_variable' in para.text:
+                # Replace the text with image
+                for run in para.runs:
+                    if 'signature_image_variable' in run.text:
+                        run.text = run.text.replace('signature_image_variable', '')
+                        run.add_picture(signature_path, width=Inches(1.5))
+                        replaced_count += 1
+                        print(f"  ✓ Added signature image #{replaced_count}")
+        
+        # Also check tables (in case it's in a table cell)
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    for para in cell.paragraphs:
+                        if 'signature_image_variable' in para.text:
+                            for run in para.runs:
+                                if 'signature_image_variable' in run.text:
+                                    run.text = run.text.replace('signature_image_variable', '')
+                                    run.add_picture(signature_path, width=Inches(1.5))
+                                    replaced_count += 1
+                                    print(f"  ✓ Added signature image in table #{replaced_count}")
+        
+        if replaced_count > 0:
+            print(f"  ✓ Total signature images added: {replaced_count}")
+            return True
+        else:
+            print(f"  ⚠️ No signature_image_variable found")
+            return False
+        
+    except Exception as e:
+        print(f"  ✗ Error adding signature: {e}")
+        traceback.print_exc()
+        return False
+
+
 def convert_to_pdf_libreoffice(docx_path):
     """Convert DOCX to PDF using LibreOffice"""
     try:
@@ -261,7 +306,13 @@ def generate_documents():
                     sig = uploaded_files.get('signature_image')
                     if aadhar or sig:
                         add_images_to_wcr(doc, aadhar, sig)
-                
+
+                # Add signature to Proforma-A
+                if doc_name == 'Proforma-A':
+                    sig = uploaded_files.get('signature_image')
+                    if sig:
+                        add_signature_to_proforma(doc, sig)
+
                 # Save DOCX (always need to save first)
                 docx_file = os.path.join(tmpdir, f"{doc_name}.docx")
                 doc.save(docx_file)
