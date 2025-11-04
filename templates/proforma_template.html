@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { 
+            size: A4; 
+            margin: 1.2cm 1.5cm;
+        }
+        
+        body { 
+            font-family: Arial, sans-serif; 
+            font-size: 9pt; 
+            line-height: 1.3;
+            color: #000;
+        }
+        
+        .header { 
+            text-align: center; 
+            margin-bottom: 15px; 
+            border-bottom: 2px solid #000; 
+            padding-bottom: 10px; 
+        }
+        
+        .header h1 { 
+            font-size: 13pt; 
+            margin: 3px 0; 
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        
+        .header h2 { 
+            font-size: 11pt; 
+            margin: 3px 0; 
+            font-weight: bold;
+        }
+        
+        .header p { 
+            font-size: 9pt; 
+            margin: 3px 0; 
+            font-style: italic;
+        }
+        
+        table { 
+            width: 100%; 
+            table-layout: fixed;
+            border-collapse: collapse; 
+            margin-top: 10px; 
+            page-break-inside: avoid;
+        }
+        
+        table td { 
+            border: 1px solid #000; 
+            padding: 5px 7px;
+            vertical-align: top;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+        }
+        
+        .sr-col { 
+            width: 5%; 
+            text-align: center; 
+            font-weight: bold;
+            font-size: 9pt;
+        }
+        
+        .field-col { 
+            width: 55%; 
+            font-size: 8pt;  /* Reduced from 8.5pt */
+            word-break: break-word;
+        }
+        
+        .value-col { 
+            width: 40%; 
+            font-size: 9pt;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .section-header { 
+            font-weight: bold; 
+            background-color: #e8e8e8; 
+            padding: 8px; 
+            margin-top: 12px;
+            border: 1px solid #000;
+            font-size: 9pt;
+        }
+        
+        .signature-section { 
+            margin-top: 30px; 
+            text-align: center;
+            page-break-inside: avoid;
+        }
+        
+        .signature-container {
+            display: inline-block;
+            margin: 0 20px;
+        }
+        
+        .signature-image { 
+            max-width: 140px; 
+            max-height: 50px;
+            margin-bottom: 5px;
+        }
+        
+        .signature-label {
+            font-weight: bold;
+            font-size: 9pt;
+            margin-top: 5px;
+        }
+        
+        .date-label {
+            font-size: 8.5pt;
+            margin-top: 3px;
+        }
+        
+        .footer-note { 
+            margin-top: 25px; 
+            font-weight: bold;
+            font-size: 9pt;
+        }
+        
+        .no-break {
+            page-break-inside: avoid;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Maharashtra State Electricity Distribution Co. Ltd.</h1>
+        <h2>Renewable Energy Generating System</h2>
+        <h2>Annexure-I</h2>
+        <p>(Commissioning Report for RE System)</p>
+    </div>
+
+    <table>
+        <tr>
+            <td class="sr-col">1</td>
+            <td class="field-col">Name of the Consumer</td>
+            <td class="value-col">{{ consumer_name or "" }}</td>
+        </tr>
+        <tr>
+            <td class="sr-col">2</td>
+            <td class="field-col">Consumer Number</td>
+            <td class="value-col">{{ consumer_number or "" }}</td>
+        </tr>
+        <tr>
+            <td class="sr-col">3</td>
+            <td class="field-col">Mobile Number</td>
+            <td class="value-col">{{ mobile_number or "" }}</td>
+        </tr>
+        <tr>
+            <td class="sr-col">4</td>
+            <td class="field-col">E-mail</td>
+            <td class="value-col">{{ email or "" }}</td>
+        </tr>
+        <tr>
+            <td class="sr-col">5</td>
+            <td class="field-col">Address of Installation</td>
+            <td class="value-col">{{ address or "" }}</td>
+        </tr>
+        <tr>
+            <td class="sr-col">6</td>
+            <td class="field-col">RE Arrangement Type</td>
+            <td class="value-col">Net Metering Arrangement</td>
+        </tr>
+        <tr>
+            <td class="sr-col">7</td>
+            <td class="field-col">RE Source</td>
+            <td class="value-col">Solar</td>
+        </tr>
+        <tr>
+            <td class="sr-col">8</td>
+            <td class="field-col">Sanctioned Capacity (KW)</td>
+            <td class="value-col">{{ sanctioned_capacity or "" }}</td>
+        </tr>
+        <tr>
+            <td class="sr-col">9</td>
+            <td class="field-col">Capacity Type</td>
+            <td class="value-col">Rooftop</td>
+        </tr>
+        <tr>
+            <td class="sr-col">10</td>
+            <td class="field-col">Project Model</td>
+            <td class="value-col">Capex</td>
+        </tr>
+        <tr>
+            <td class="sr-col">11</td>
+            <td class="field-col">RE installed Capacity (Rooftop)(KW)</td>
+            <td class="value-col">{{ installed_capacity or "" }}</td>
+        </tr>
+        <tr>
+            <td class="sr-col">12</td>
+            <td class="field-col">RE installed Capacity (Rooftop + Ground) (KW)</td>
+            <td class="value-col">NA</td>
+        </tr>
+        <tr>
+            <td class="sr-col">13</td>
+            <td class="field-col">RE installed Capacity<br>(Ground)(KW)</td>
+            <td class="value-col">-</td>
+        </tr>
+        <tr>
+            <td class="sr-col">14</td>
+            <td class="field-col">Installation date</td>
+            <td class="value-col">{{ installation_date or "" }}</td>
+        </tr>
+    </table>
+
+    <div class="section-header">15. Solar PV Details</div>
+    
+    <table class="no-break">
+        <tr>
+            <td class="field-col">Inverter Capacity (KW)</td>
+            <td class="value-col">{{ inverter_capacity or "" }}</td>
+        </tr>
+        <tr>
+            <td class="field-col">Inverter Make</td>
+            <td class="value-col">{{ module_make or "" }}</td>
+        </tr>
+        <tr>
+            <td class="field-col">Inverter Model Number</td>
+            <td class="value-col">{{ model_number_inverter or "" }}</td>
+        </tr>
+        <tr>
+            <td class="field-col">No of PV Modules</td>
+            <td class="value-col">{{ number_of_modules or "" }}</td>
+        </tr>
+        <tr>
+            <td class="field-col">Module Capacity (KW)</td>
+            <td class="value-col">{{ module_capacity or "" }}</td>
+        </tr>
+        <tr>
+            <td class="field-col">Module Make</td>
+            <td class="value-col">{{ module_make or "" }}</td>
+        </tr>
+        <tr>
+            <td class="field-col">Module Wattage (Wp)</td>
+            <td class="value-col">{{ wattage or "" }}</td>
+        </tr>
+        <tr>
+            <td class="field-col">Module Model Number</td>
+            <td class="value-col">{{ model_number or "" }}</td>
+        </tr>
+    </table>
+
+    <div class="signature-section no-break">
+        <div class="signature-container">
+            {% if signature_image %}
+            <img src="{{ signature_image }}" class="signature-image" alt="Consumer Signature">
+            {% else %}
+            <div style="height: 50px; width: 140px; border-bottom: 1px solid #000; margin: 0 auto;"></div>
+            {% endif %}
+            <p class="signature-label">Signature of Consumer</p>
+            <p class="date-label">Date: {{ todays_date or "" }}</p>
+        </div>
+    </div>
+
+    <div class="signature-section no-break" style="margin-top: 40px;">
+        <div class="signature-container">
+            {% if signature_image %}
+            <img src="{{ signature_image }}" class="signature-image" alt="Beneficiary Signature">
+            {% else %}
+            <div style="height: 50px; width: 140px; border-bottom: 1px solid #000; margin: 0 auto;"></div>
+            {% endif %}
+            <p class="signature-label">Signature of the beneficiary</p>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        To be uploaded separately:
+    </div>
+</body>
+</html>
