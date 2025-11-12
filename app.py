@@ -12,6 +12,7 @@ from PIL import Image
 import base64
 from io import BytesIO
 import subprocess
+import re
 
 app = Flask(__name__)
 app.secret_key = 'solar_unified_doc_generator_2025_secure_key'
@@ -44,7 +45,7 @@ VARIABLE_MAPPING = {
     'sanctioned_caacity_variable': 'sanctioned_capacity',
     'cost_of_rts_variable': 'total_cost',
     'mobile_number_variable': 'mobile_number',
-    'email_address_variable': 'email',
+    'email_variable': 'email',
     'system_checkdate_variable': 'performance_check_date',
     'todays_date_variable': 'todays_date',
 }
@@ -68,13 +69,22 @@ def check_libreoffice():
 PDF_AVAILABLE = check_libreoffice()
 
 def replace_in_runs(runs, replacements):
-    """Handle variables split across runs"""
+    """Handle variables split across runs (CASE-INSENSITIVE)"""
     full_text = ''.join(run.text for run in runs)
     
     modified = False
+    # Create a case-insensitive mapping
     for var_name, var_value in replacements.items():
+        # Try exact match first
         if var_name in full_text:
             full_text = full_text.replace(var_name, str(var_value))
+            modified = True
+        # Try case-insensitive match
+        elif var_name.lower() in full_text.lower():
+            # Find all case variations and replace them
+            import re
+            pattern = re.compile(re.escape(var_name), re.IGNORECASE)
+            full_text = pattern.sub(str(var_value), full_text)
             modified = True
     
     if modified:
@@ -83,6 +93,7 @@ def replace_in_runs(runs, replacements):
         if runs:
             runs[0].text = full_text
             runs[0].font.highlight_color = None
+
 
 def docx_replace_robust(doc, form_data):
     """Replace variables in paragraphs AND tables"""
